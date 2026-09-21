@@ -1,0 +1,1257 @@
+<!DOCTYPE html>
+<html lang="ta" class="h-full bg-slate-50">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gomathi Bills</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Noto Sans Tamil & Inter Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+Tamil:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'Noto Sans Tamil', 'sans-serif'],
+                        tamil: ['Noto Sans Tamil', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                            800: '#075985',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', 'Noto Sans Tamil', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* Printable stylesheet styling */
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+            .print-only {
+                display: block !important;
+            }
+            body {
+                background: white !important;
+                color: black !important;
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+            #app-container {
+                display: none !important;
+            }
+            #invoice-print-area {
+                display: block !important;
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+            }
+        }
+
+        .print-only {
+            display: none;
+        }
+
+        /* Custom scrollbar for better visual feel */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="h-full text-slate-800 antialiased selection:bg-brand-500 selection:text-white">
+
+    <!-- Auth Gate -->
+    <div id="auth-gate" class="fixed inset-0 z-50 bg-slate-900 flex items-center justify-center p-6">
+        <div class="bg-white rounded-2xl shadow-xl p-8 max-w-sm w-full text-center space-y-4">
+            <div class="w-14 h-14 bg-brand-600 rounded-2xl flex items-center justify-center mx-auto text-white text-2xl">
+                <i class="fa-solid fa-file-invoice-dollar"></i>
+            </div>
+            <h1 class="text-lg font-bold text-slate-900 font-tamil">ஸ்ரீ கோமதி ஏஜென்சீஸ்</h1>
+            <p class="text-sm text-slate-500" id="auth-gate-message">Sign in with your Google account to continue.</p>
+            <button id="google-signin-btn" onclick="signInWithGoogle()" class="w-full inline-flex items-center justify-center gap-2 border border-slate-300 hover:bg-slate-50 text-slate-700 font-medium px-4 py-2.5 rounded-xl transition active:scale-95">
+                <svg width="18" height="18" viewBox="0 0 48 48">
+                    <path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"/>
+                    <path fill="#FF3D00" d="M6.306 14.691l6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 16.318 4 9.656 8.337 6.306 14.691z"/>
+                    <path fill="#4CAF50" d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238C29.211 35.091 26.715 36 24 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z"/>
+                    <path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303c-.792 2.237-2.231 4.166-4.087 5.571l6.19 5.238C39.708 36.638 44 30.851 44 24c0-1.341-.138-2.65-.389-3.917z"/>
+                </svg>
+                <span>Sign in with Google</span>
+            </button>
+        </div>
+    </div>
+
+    <div id="app-container" class="hidden min-h-screen flex flex-col bg-slate-50">
+
+        <!-- Navigation Header -->
+        <header class="no-print bg-slate-900 text-white sticky top-0 z-30 shadow-md">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex items-center justify-between h-16">
+                    <div class="flex items-center space-x-3 cursor-pointer" onclick="app.showDashboard()">
+                        <div class="bg-brand-600 p-2.5 rounded-xl shadow-lg flex items-center justify-center">
+                            <i class="fa-solid font-bold fa-file-invoice-dollar text-xl text-white"></i>
+                        </div>
+                        <div>
+                            <h1 class="font-bold text-lg sm:text-xl tracking-tight leading-tight">ஸ்ரீ கோமதி ஏஜென்சீஸ்</h1>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center space-x-3">
+                        <div class="flex items-center bg-slate-800 rounded-lg p-1 text-xs font-semibold no-print" id="lang-toggle">
+                            <button onclick="app.setLanguage('ta')" data-lang-btn="ta" class="px-2.5 py-1.5 rounded-md transition">தமிழ்</button>
+                            <button onclick="app.setLanguage('en')" data-lang-btn="en" class="px-2.5 py-1.5 rounded-md transition">English</button>
+                        </div>
+                        <button onclick="app.createNewBill()" class="bg-brand-600 hover:bg-brand-500 text-white px-3 sm:px-4 py-2 rounded-lg font-medium text-sm flex items-center space-x-2 shadow-sm transition active:scale-95">
+                            <i class="fa-solid fa-plus"></i>
+                            <span data-i18n="newBill">புதிய பில்</span>
+                        </button>
+                        <button onclick="signOutUser()" title="Sign out" class="no-print p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition">
+                            <i class="fa-solid fa-right-from-bracket"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content Area -->
+        <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+            <!-- DASHBOARD VIEW -->
+            <section id="dashboard-view" class="space-y-6">
+
+                <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200/80 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div class="relative flex-1 min-w-0">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                        <input type="text" id="search-input" onkeyup="app.filterBills()" data-i18n-placeholder="searchPlaceholder" placeholder="வாடிக்கையாளர் பெயர் அல்லது பொருளின் பெயர் மூலம் தேடுக..."
+                               class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm">
+                    </div>
+                    <select id="sort-select" onchange="app.setSortOption(this.value)" class="w-full md:w-auto min-w-0 px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm bg-white text-slate-700">
+                        <option value="date-desc" selected data-i18n="sortDateDesc">தேதி (புதியது முதலில்)</option>
+                        <option value="date-asc" data-i18n="sortDateAsc">தேதி (பழையது முதலில்)</option>
+                        <option value="id-desc" data-i18n="sortIdDesc">பில் எண் (இறங்கு வரிசை)</option>
+                        <option value="id-asc" data-i18n="sortIdAsc">பில் எண் (ஏறு வரிசை)</option>
+                        <option value="name-asc" data-i18n="sortNameAsc">பெயர் (A-Z)</option>
+                        <option value="name-desc" data-i18n="sortNameDesc">பெயர் (Z-A)</option>
+                    </select>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden">
+                    <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+                        <h2 class="font-bold text-slate-800 text-base flex items-center space-x-2">
+                            <i class="fa-solid fa-list-check text-brand-600"></i>
+                            <span data-i18n="billsHistoryTitle">பில்கள் பட்டியல்</span>
+                        </h2>
+                    </div>
+
+                    <!-- Desktop Bills Table -->
+                    <div class="hidden md:block overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-slate-50 text-slate-500 font-semibold text-xs uppercase tracking-wider border-b border-slate-200">
+                                    <th class="py-3.5 px-6" data-i18n="colBillNo">பில் எண்</th>
+                                    <th class="py-3.5 px-6" data-i18n="colDate">தேதி</th>
+                                    <th class="py-3.5 px-6" data-i18n="colCustomer">வாடிக்கையாளர்</th>
+                                    <th class="py-3.5 px-6 text-center" data-i18n="colItemsCount">பொருட்கள்</th>
+                                    <th class="py-3.5 px-6 text-right" data-i18n="colTotalAmount">தொகை</th>
+                                    <th class="py-3.5 px-6 text-center" data-i18n="actionCol">நடவடிக்கை</th>
+                                </tr>
+                            </thead>
+                            <tbody id="bills-table-body" class="divide-y divide-slate-100 text-sm">
+                                <!-- Dynamic rows -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Mobile Bills Cards -->
+                    <div id="bills-card-container" class="md:hidden divide-y divide-slate-100">
+                        <!-- Dynamic mobile cards -->
+                    </div>
+
+                    <!-- Empty state -->
+                    <div id="no-bills-message" class="hidden p-12 text-center">
+                        <div class="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto text-slate-400 text-2xl mb-3">
+                            <i class="fa-regular fa-folder-open"></i>
+                        </div>
+                        <h3 class="font-bold text-slate-700" data-i18n="noBillsTitle">பில்கள் எதுவும் இல்லை</h3>
+                        <p class="text-sm text-slate-500 mt-1" data-i18n="noBillsSubtitle">புதிய பில் உருவாக்க 'புதிய பில்' பொத்தானைக் கிளிக் செய்யவும்.</p>
+                        <button onclick="app.createNewBill()" class="mt-4 inline-flex items-center space-x-2 px-4 py-2 bg-brand-600 text-white text-sm font-medium rounded-lg">
+                            <i class="fa-solid fa-plus"></i>
+                            <span data-i18n="createBillBtn">உருவாக்குக</span>
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <section id="editor-view" class="hidden space-y-6">
+                <!-- Header Actions -->
+                <div class="flex items-center justify-between">
+                    <button onclick="app.showDashboard()" class="inline-flex items-center space-x-2 text-sm font-medium text-slate-600 hover:text-slate-900 bg-white border border-slate-200 px-3.5 py-2 rounded-xl transition">
+                        <i class="fa-solid fa-arrow-left"></i>
+                        <span data-i18n="backToList">திரும்பு</span>
+                    </button>
+                    <div class="flex items-center space-x-3">
+                        <button onclick="app.saveCurrentBill()" class="inline-flex items-center space-x-2 bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium px-5 py-2 rounded-xl shadow-md transition active:scale-95">
+                            <i class="fa-solid fa-floppy-disk"></i>
+                            <span data-i18n="saveBill">சேமி</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Bill Form Card -->
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-6 space-y-6">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center pb-4 border-b border-slate-100 gap-4">
+                        <div>
+                            <h2 id="editor-title" class="text-xl font-bold text-slate-900" data-i18n="createBillTitle">புதிய பில்</h2>
+                            <p class="text-xs text-slate-500 mt-0.5" data-i18n="editorSubtitle">பொருட்களின் விவரங்கள் மற்றும் தொகையை உள்ளிடவும்.</p>
+                        </div>
+                        <div class="flex items-center space-x-3 w-full sm:w-auto">
+                            <div class="bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-mono font-bold text-slate-700">
+                                # <span id="bill-id-display">--</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Customer & Bill Meta Inputs -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">
+                                <span data-i18n="customerName">வாடிக்கையாளர் பெயர்</span> <span class="text-rose-500">*</span>
+                            </label>
+                            <input type="text" id="bill-customer-name" data-i18n-placeholder="customerNamePlaceholder" placeholder="உத்: ராமன்"
+                                   oninput="app.scheduleAutoSave()"
+                                   class="w-full px-3.5 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1" data-i18n="phoneNumber">
+                                தொலைபேசி எண்
+                            </label>
+                            <input type="tel" id="bill-customer-phone" placeholder="9876543210"
+                                   oninput="app.scheduleAutoSave()"
+                                   class="w-full px-3.5 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">
+                                <span data-i18n="billDate">தேதி</span> <span class="text-rose-500">*</span>
+                            </label>
+                            <input type="date" id="bill-date"
+                                   oninput="app.scheduleAutoSave()"
+                                   class="w-full px-3.5 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm">
+                        </div>
+                    </div>
+
+                    <!-- Items Table Editor -->
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-center">
+                            <h3 class="font-bold text-slate-800 text-sm flex items-center space-x-2">
+                                <i class="fa-solid fa-cart-flatbed text-brand-600"></i>
+                                <span data-i18n="itemDetails">பொருட்கள் விவரம்</span>
+                            </h3>
+                        </div>
+
+                        <!-- Item Datalist for Auto-complete -->
+                        <datalist id="historical-items-list"></datalist>
+
+                        <div class="overflow-x-auto rounded-xl border border-slate-200">
+                            <table class="w-full text-left border-collapse min-w-[640px]">
+                                <thead>
+                                    <tr class="bg-slate-50 text-slate-600 font-semibold text-xs uppercase tracking-wider border-b border-slate-200">
+                                        <th class="py-3 px-3 text-center w-12" data-i18n="colSno">வ.எண்</th>
+                                        <th class="py-3 px-4" data-i18n="colItemDesc">பொருள்</th>
+                                        <th class="py-3 px-3 w-28 text-center" data-i18n="colQty">எண்ணிக்கை</th>
+                                        <th class="py-3 px-3 w-32 text-right" data-i18n="colPrice">விலை (₹)</th>
+                                        <th class="py-3 px-3 w-36 text-right" data-i18n="colTotal">மொத்தம் (₹)</th>
+                                        <th class="py-3 px-2 text-center w-12"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="editor-items-body" class="divide-y divide-slate-100 text-sm">
+                                    <!-- Dynamic rows added via JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Add Item Row button -->
+                        <div class="flex justify-between items-center pt-2">
+                            <button type="button" onclick="app.addItemRow()" class="inline-flex items-center space-x-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition active:scale-95">
+                                <i class="fa-solid fa-plus text-brand-600"></i>
+                                <span data-i18n="addItemRow">+ மேலும் பொருள் சேர்க்க</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="border-t border-slate-100 pt-4 flex flex-col sm:flex-row justify-between items-end gap-4">
+                        <div class="w-full sm:w-1/2 space-y-2">
+                            <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider" data-i18n="notesTerms">
+                                குறிப்புகள் / விதிமுறைகள்
+                            </label>
+                            <textarea id="bill-notes" rows="2" placeholder="-"
+                                      oninput="app.scheduleAutoSave()"
+                                      class="w-full p-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500 text-xs"></textarea>
+                        </div>
+
+                        <div class="w-full sm:w-80 bg-slate-50 rounded-2xl p-4 border border-slate-200 space-y-3">
+                            <div class="flex justify-between items-center text-sm text-slate-600">
+                                <span data-i18n="totalItemsLabel">பொருட்கள் எண்ணிக்கை:</span>
+                                <span id="summary-items-count" class="font-bold text-slate-800">0</span>
+                            </div>
+                            <div class="border-t border-slate-200 pt-2 flex justify-between items-center">
+                                <span class="font-bold text-slate-900 text-base" data-i18n="grandTotalLabel">மொத்த தொகை:</span>
+                                <span id="summary-grand-total" class="font-extrabold text-2xl text-brand-700">₹ 0</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="preview-view" class="hidden space-y-6">
+                <!-- Action Buttons bar -->
+                <div class="no-print flex flex-wrap items-center justify-between gap-3 bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
+                    <button onclick="app.showDashboard()" class="inline-flex items-center space-x-2 text-sm font-medium text-slate-600 hover:text-slate-900 bg-slate-100 px-3.5 py-2 rounded-xl transition">
+                        <i class="fa-solid fa-arrow-left"></i>
+                        <span data-i18n="dashboardBtn">முகப்பு</span>
+                    </button>
+
+                    <div class="flex items-center flex-wrap gap-2">
+                        <button onclick="app.editCurrentPreviewBill()" class="inline-flex items-center space-x-1.5 px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium rounded-xl transition">
+                            <i class="fa-solid fa-pen-to-square"></i>
+                            <span data-i18n="editBtn">திருத்து</span>
+                        </button>
+
+                        <button onclick="app.printInvoice()" class="inline-flex items-center space-x-1.5 px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white text-sm font-medium rounded-xl shadow-sm transition">
+                            <i class="fa-solid fa-print"></i>
+                            <span data-i18n="printBtn">அச்சிடு</span>
+                        </button>
+
+                        <button onclick="app.exportPDF()" class="inline-flex items-center space-x-1.5 px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-sm font-medium rounded-xl shadow-sm transition">
+                            <i class="fa-solid fa-file-pdf"></i>
+                            <span data-i18n="pdfBtn">PDF பதிவிறக்கம்</span>
+                        </button>
+
+                        <button onclick="app.shareWhatsApp()" class="inline-flex items-center space-x-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium rounded-xl shadow-sm transition">
+                            <i class="fa-brands fa-whatsapp text-lg"></i>
+                            <span data-i18n="whatsappBtn">பகிர்</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="flex justify-center">
+                    <div id="invoice-card" class="bg-white w-full max-w-3xl p-6 sm:p-10 rounded-2xl shadow-lg border border-slate-200 space-y-6 text-slate-800">
+                        <!-- Invoice Header -->
+                        <div class="flex flex-col sm:flex-row justify-between items-start border-b-2 border-slate-800 pb-6 gap-4">
+                            <div>
+                                <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight font-tamil">ஸ்ரீ கோமதி ஏஜென்சீஸ்</h2>
+                                <p class="text-xs text-slate-500 mt-3.5">விருதுநகர் | <span data-i18n="phoneCellLabel">செல்:</span> +91 97902 28005</p>
+                            </div>
+                            <div class="sm:text-right">
+                                <span class="bg-slate-900 text-white px-3 py-1 rounded-md font-mono text-xs font-bold uppercase tracking-widest inline-block mb-1" data-i18n="invoiceTag">ரசீது</span>
+                                <p class="text-sm font-bold text-slate-800"><span data-i18n="billNoLabel">பில் எண்:</span> <span id="prev-bill-id" class="font-mono">--</span></p>
+                                <p class="text-xs text-slate-500"><span data-i18n="dateLabel">தேதி:</span> <span id="prev-bill-date">--</span></p>
+                            </div>
+                        </div>
+
+                        <!-- Customer Info -->
+                        <div class="bg-slate-50 rounded-xl p-4 border border-slate-200/80 flex flex-col sm:flex-row justify-between gap-2 text-sm">
+                            <div>
+                                <span class="text-xs font-semibold uppercase text-slate-400 block" data-i18n="customerDetailsLabel">பெறுநர் விவரம்:</span>
+                                <h4 id="prev-customer-name" class="font-bold text-slate-900">--</h4>
+                            </div>
+                            <div id="prev-phone-container" class="sm:text-right">
+                                <span class="text-xs font-semibold uppercase text-slate-400 block" data-i18n="phoneLabel">தொலைபேசி:</span>
+                                <p id="prev-customer-phone" class="font-semibold text-slate-700">--</p>
+                            </div>
+                        </div>
+
+                        <!-- Items Table -->
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="border-y-2 border-slate-800 text-xs font-bold uppercase tracking-wider text-slate-900">
+                                        <th class="py-2.5 px-2 text-center w-12" data-i18n="colSno">வ.எண்</th>
+                                        <th class="py-2.5 px-3" data-i18n="pColItemName">பொருள் விபரம்</th>
+                                        <th class="py-2.5 px-2 text-center w-20" data-i18n="colQty">எண்ணிக்கை</th>
+                                        <th class="py-2.5 px-3 text-right w-24" data-i18n="colPrice">விலை (₹)</th>
+                                        <th class="py-2.5 px-3 text-right w-28" data-i18n="colTotal">மொத்தம் (₹)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="prev-items-body" class="divide-y divide-slate-200 text-sm">
+                                    <!-- Dynamic Rows -->
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Totals & Notes -->
+                        <div class="border-t-2 border-slate-800 pt-4 flex flex-col sm:flex-row justify-between items-start gap-4">
+                            <div class="text-xs text-slate-500 space-y-1 max-w-xs">
+                                <p class="font-semibold text-slate-700" data-i18n="termsLabel">குறிப்பு:</p>
+                                <p id="prev-notes">-</p>
+                            </div>
+
+                            <div class="w-full sm:w-64 space-y-1.5 text-right">
+                                <div class="flex justify-between text-base font-extrabold text-slate-900 pt-2 border-t border-slate-200">
+                                    <span data-i18n="grandTotalRow">மொத்த தொகை:</span>
+                                    <span id="prev-grand-total" class="text-xl text-brand-700">₹ 0</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- Hidden Print Area -->
+    <div id="invoice-print-area" class="print-only p-8 bg-white text-black font-sans">
+        <!-- Replicated cleanly for native print dialog -->
+    </div>
+
+    <!-- Firebase (Auth + Firestore) -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyBKn611hXloTMOQo1-r5Ap8uSEpsuJ7-SI",
+            authDomain: "gomathibills.firebaseapp.com",
+            projectId: "gomathibills",
+            storageBucket: "gomathibills.firebasestorage.app",
+            messagingSenderId: "470031845414",
+            appId: "1:470031845414:web:ad33ed74eace48ca0d3ee7"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+        db.enablePersistence().catch(() => {
+            // Multiple tabs open, or browser doesn't support it - app still works online.
+        });
+
+        // Empty = any signed-in Google account is allowed. To restrict later,
+        // add specific emails here, e.g. ["balas0011@gmail.com"] - and update
+        // the matching Firestore security rule the same way.
+        const ALLOWED_EMAILS = [];
+
+        function signInWithGoogle() {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            auth.signInWithPopup(provider).catch(err => {
+                console.error(err);
+                alert("Sign-in failed: " + err.message);
+            });
+        }
+
+        function signOutUser() {
+            auth.signOut();
+        }
+
+        const I18N = {
+            ta: {
+                newBill: "புதிய பில்",
+                backToList: "திரும்பு",
+                saveBill: "சேமி",
+                createBillTitle: "புதிய பில்",
+                createNewBillTitle: "புதிய பில் உருவாக்குதல்",
+                editBillTitle: "பில் திருத்துதல்",
+                editorSubtitle: "பொருட்களின் விவரங்கள் மற்றும் தொகையை உள்ளிடவும்.",
+                customerName: "வாடிக்கையாளர் பெயர்",
+                customerNamePlaceholder: "e.g.: ராமன்",
+                phoneNumber: "தொலைபேசி எண்",
+                billDate: "தேதி",
+                itemDetails: "பொருட்கள் விவரம்",
+                colSno: "வ.எண்",
+                colItemDesc: "பொருள்",
+                colQty: "எண்ணிக்கை",
+                colPrice: "விலை (₹)",
+                colTotal: "மொத்தம் (₹)",
+                addItemRow: "மேலும் பொருள் சேர்க்க",
+                notesTerms: "குறிப்புகள் / விதிமுறைகள்",
+                totalItemsLabel: "பொருட்கள் எண்ணிக்கை:",
+                grandTotalLabel: "மொத்த தொகை:",
+                itemNamePlaceholder: "பொருள் பெயர்...",
+                dashboardBtn: "முகப்பு",
+                editBtn: "திருத்து",
+                printBtn: "அச்சிடு",
+                pdfBtn: "PDF பதிவிறக்கம்",
+                whatsappBtn: "பகிர்",
+                phoneCellLabel: "செல்:",
+                invoiceTag: "ரசீது",
+                billNoLabel: "பில் எண்:",
+                dateLabel: "தேதி:",
+                customerDetailsLabel: "பெறுநர் விவரம்:",
+                phoneLabel: "தொலைபேசி:",
+                pColItemName: "பொருள் விபரம்",
+                termsLabel: "குறிப்பு:",
+                grandTotalRow: "மொத்த தொகை:",
+                alertEnterCustomerName: "தயவுசெய்து வாடிக்கையாளர் பெயரை உள்ளிடவும்!",
+                alertAtLeastOneItemName: "குறைந்தது ஒரு பொருளின் பெயராவது இருக்க வேண்டும்!",
+                alertAtLeastOneItem: "குறைந்தது ஒரு பொருள் இருக்க வேண்டும்!",
+                confirmDeleteBill: "பில் எண் {id} ஐ நிச்சயம் நீக்க வேண்டுமா?",
+                defaultNotesFallback: "-",
+                waBillNo: "பில் எண்:",
+                waDate: "தேதி:",
+                waCustomer: "வாடிக்கையாளர்:",
+                waItemDetails: "பொருட்கள் விவரம்:",
+                waGrandTotal: "மொத்த தொகை:",
+                waThanks: "நன்றி!",
+                sortDateDesc: "தேதி (புதியது முதலில்)",
+                sortDateAsc: "தேதி (பழையது முதலில்)",
+                sortIdDesc: "பில் எண் (இறங்கு வரிசை)",
+                sortIdAsc: "பில் எண் (ஏறு வரிசை)",
+                sortNameAsc: "பெயர் (A-Z)",
+                sortNameDesc: "பெயர் (Z-A)",
+                billsHistoryTitle: "பில்கள் பட்டியல்",
+                searchPlaceholder: "வாடிக்கையாளர் பெயர் அல்லது பொருளின் பெயர் மூலம் தேடுக...",
+                colBillNo: "பில் எண்",
+                colDate: "தேதி",
+                colCustomer: "வாடிக்கையாளர்",
+                colItemsCount: "பொருட்கள்",
+                colTotalAmount: "தொகை",
+                actionCol: "நடவடிக்கை",
+                noBillsTitle: "பில்கள் எதுவும் இல்லை",
+                noBillsSubtitle: "புதிய பில் உருவாக்க 'புதிய பில்' பொத்தானைக் கிளிக் செய்யவும்.",
+                createBillBtn: "உருவாக்குக",
+                itemsWord: "பொருட்கள்",
+                viewTooltip: "பார்க்க",
+                editTooltip: "திருத்த",
+                deleteTooltip: "நீக்க",
+                deleteBtnLabel: "நீக்கு",
+                pdfSaveHint: "அடுத்த திரையில், 'Destination' / 'Printer' பட்டியலில் இருந்து 'Save as PDF' என்பதைத் தேர்ந்தெடுத்து சேமிக்கவும்.",
+            },
+            en: {
+                newBill: "New Bill",
+                backToList: "Back to List",
+                saveBill: "Save Bill",
+                createBillTitle: "Create Bill",
+                createNewBillTitle: "Create New Bill",
+                editBillTitle: "Edit Bill",
+                editorSubtitle: "Enter the item details and amount.",
+                customerName: "Customer Name",
+                customerNamePlaceholder: "e.g. Raman",
+                phoneNumber: "Phone Number",
+                billDate: "Bill Date",
+                itemDetails: "Item Details",
+                colSno: "S.No",
+                colItemDesc: "Item Description",
+                colQty: "Qty",
+                colPrice: "Price (₹)",
+                colTotal: "Total (₹)",
+                addItemRow: "Add Item Row",
+                notesTerms: "Notes / Terms",
+                totalItemsLabel: "Total Items:",
+                grandTotalLabel: "Grand Total:",
+                itemNamePlaceholder: "Item name...",
+                dashboardBtn: "Dashboard",
+                editBtn: "Edit",
+                printBtn: "Print",
+                pdfBtn: "Download PDF",
+                whatsappBtn: "Share",
+                phoneCellLabel: "Phone:",
+                invoiceTag: "INVOICE",
+                billNoLabel: "Bill No:",
+                dateLabel: "Date:",
+                customerDetailsLabel: "Customer Details:",
+                phoneLabel: "Phone:",
+                pColItemName: "Item Name",
+                termsLabel: "Note:",
+                grandTotalRow: "Grand Total:",
+                alertEnterCustomerName: "Please enter customer name!",
+                alertAtLeastOneItemName: "At least one item name is required!",
+                alertAtLeastOneItem: "At least one item is required!",
+                confirmDeleteBill: "Are you sure you want to delete bill {id}?",
+                defaultNotesFallback: "-",
+                waBillNo: "Bill No:",
+                waDate: "Date:",
+                waCustomer: "Customer:",
+                waItemDetails: "Item Details:",
+                waGrandTotal: "Grand Total:",
+                waThanks: "Thank you!",
+                sortDateDesc: "Date (Newest first)",
+                sortDateAsc: "Date (Oldest first)",
+                sortIdDesc: "Bill No (High to Low)",
+                sortIdAsc: "Bill No (Low to High)",
+                sortNameAsc: "Name (A-Z)",
+                sortNameDesc: "Name (Z-A)",
+                billsHistoryTitle: "Bills History",
+                searchPlaceholder: "Search customer or item...",
+                colBillNo: "Bill No",
+                colDate: "Date",
+                colCustomer: "Customer",
+                colItemsCount: "Items",
+                colTotalAmount: "Total",
+                actionCol: "Action",
+                noBillsTitle: "No bills yet",
+                noBillsSubtitle: "Click the 'New Bill' button to create one.",
+                createBillBtn: "Create Bill",
+                itemsWord: "items",
+                viewTooltip: "View",
+                editTooltip: "Edit",
+                deleteTooltip: "Delete",
+                deleteBtnLabel: "Delete",
+                pdfSaveHint: "In the next screen, choose 'Save as PDF' from the Destination/Printer list to save it."
+            }
+        };
+
+        class BillingApp {
+            constructor(db, uid) {
+                this.db = db;
+                this.billsCollection = db.collection("users").doc(uid).collection("bills");
+                this.bills = [];
+                this.currentBill = null;
+                this.historicalPrices = {}; // Map of item -> latest price
+                this.lang = localStorage.getItem("sevar_lang") || "ta";
+                this.editorMode = null;
+                this.sortField = "date";
+                this.sortDir = "desc";
+                this.init();
+            }
+
+            t(key) {
+                return (I18N[this.lang] && I18N[this.lang][key]) || key;
+            }
+
+            setLanguage(lang) {
+                this.lang = lang;
+                localStorage.setItem("sevar_lang", lang);
+                this.applyLanguage();
+            }
+
+            applyLanguage() {
+                document.documentElement.lang = this.lang;
+
+                document.querySelectorAll("[data-i18n]").forEach(el => {
+                    el.textContent = this.t(el.dataset.i18n);
+                });
+
+                document.querySelectorAll("[data-i18n-placeholder]").forEach(el => {
+                    el.placeholder = this.t(el.dataset.i18nPlaceholder);
+                });
+
+                document.querySelectorAll("[data-lang-btn]").forEach(btn => {
+                    const active = btn.dataset.langBtn === this.lang;
+                    btn.classList.toggle("bg-brand-600", active);
+                    btn.classList.toggle("text-white", active);
+                    btn.classList.toggle("text-slate-300", !active);
+                });
+
+                document.querySelectorAll(".item-desc").forEach(input => {
+                    input.placeholder = this.t("itemNamePlaceholder");
+                });
+
+                const editorTitle = document.getElementById("editor-title");
+                if (editorTitle && this.editorMode) {
+                    editorTitle.textContent = this.editorMode === "edit" ? this.t("editBillTitle") : this.t("createNewBillTitle");
+                }
+
+                if (this.currentBill && !document.getElementById("preview-view").classList.contains("hidden")) {
+                    const notesEl = document.getElementById("prev-notes");
+                    if (notesEl) {
+                        notesEl.textContent = this.currentBill.notes || this.t("defaultNotesFallback");
+                    }
+                }
+
+                if (document.getElementById("bills-table-body")) {
+                    this.renderDashboard();
+                }
+            }
+
+            init() {
+                this.applyLanguage();
+                this.unsubscribeBills = this.billsCollection.onSnapshot(snapshot => {
+                    this.bills = snapshot.docs.map(doc => doc.data());
+                    this.buildHistoricalPricesMap();
+                    this.updateItemDatalist();
+                    if (document.getElementById("bills-table-body")) {
+                        this.renderDashboard();
+                    }
+                }, err => {
+                    if (!this.destroyed) {
+                        console.error("Failed to sync bills:", err);
+                        alert("Could not sync bills: " + err.message);
+                    }
+                });
+            }
+
+            destroy() {
+                this.destroyed = true;
+                if (this.unsubscribeBills) {
+                    this.unsubscribeBills();
+                }
+            }
+
+            buildHistoricalPricesMap() {
+                this.historicalPrices = {};
+                // Process bills chronologically to keep the latest price
+                const sorted = [...this.bills].sort((a, b) => new Date(a.date) - new Date(b.date));
+                sorted.forEach(bill => {
+                    if (bill.items) {
+                        bill.items.forEach(item => {
+                            if (item.description && item.description.trim()) {
+                                const cleanName = item.description.trim().toLowerCase();
+                                this.historicalPrices[cleanName] = {
+                                    originalName: item.description.trim(),
+                                    lastPrice: item.price
+                                };
+                            }
+                        });
+                    }
+                });
+            }
+
+            updateItemDatalist() {
+                const datalist = document.getElementById("historical-items-list");
+                if (!datalist) return;
+                datalist.innerHTML = "";
+                Object.values(this.historicalPrices).forEach(entry => {
+                    const option = document.createElement("option");
+                    option.value = entry.originalName;
+                    option.dataset.price = entry.lastPrice;
+                    datalist.appendChild(option);
+                });
+            }
+
+            getSortedBills() {
+                const dir = this.sortDir === "asc" ? 1 : -1;
+                return [...this.bills].sort((a, b) => {
+                    let cmp = 0;
+                    if (this.sortField === "date") {
+                        cmp = new Date(a.date) - new Date(b.date);
+                    } else if (this.sortField === "id") {
+                        cmp = a.id.localeCompare(b.id, undefined, { numeric: true });
+                    } else if (this.sortField === "name") {
+                        cmp = a.customerName.localeCompare(b.customerName);
+                    }
+                    return cmp * dir;
+                });
+            }
+
+            setSortOption(value) {
+                const [field, dir] = value.split("-");
+                this.sortField = field;
+                this.sortDir = dir;
+                this.renderDashboard();
+                this.filterBills();
+            }
+
+            renderDashboard() {
+                const tableBody = document.getElementById("bills-table-body");
+                const cardsContainer = document.getElementById("bills-card-container");
+                const noBillsMsg = document.getElementById("no-bills-message");
+                if (!tableBody || !cardsContainer || !noBillsMsg) return;
+
+                tableBody.innerHTML = "";
+                cardsContainer.innerHTML = "";
+
+                if (this.bills.length === 0) {
+                    noBillsMsg.classList.remove("hidden");
+                } else {
+                    noBillsMsg.classList.add("hidden");
+                }
+
+                const sortedBills = this.getSortedBills();
+
+                sortedBills.forEach(bill => {
+                    // Table Row (Desktop)
+                    const tr = document.createElement("tr");
+                    tr.className = "hover:bg-slate-50/80 transition";
+                    tr.innerHTML = `
+                        <td class="py-3.5 px-6 font-mono font-bold text-brand-700">${bill.id}</td>
+                        <td class="py-3.5 px-6 text-slate-600">${bill.date}</td>
+                        <td class="py-3.5 px-6 font-semibold text-slate-900">
+                            ${bill.customerName}
+                            ${bill.phone ? `<span class="block text-xs text-slate-400 font-normal">${bill.phone}</span>` : ''}
+                        </td>
+                        <td class="py-3.5 px-6 text-center">
+                            <span class="bg-slate-100 text-slate-700 text-xs px-2.5 py-1 rounded-full font-medium">${bill.items ? bill.items.length : 0} ${this.t('itemsWord')}</span>
+                        </td>
+                        <td class="py-3.5 px-6 text-right font-extrabold text-slate-900">₹ ${bill.grandTotal.toLocaleString('en-IN')}</td>
+                        <td class="py-3.5 px-6 text-center">
+                            <div class="flex items-center justify-center space-x-2">
+                                <button onclick="app.viewInvoice('${bill.id}')" class="p-1.5 text-brand-600 hover:bg-brand-50 rounded-lg transition" title="${this.t('viewTooltip')}">
+                                    <i class="fa-solid fa-eye"></i>
+                                </button>
+                                <button onclick="app.editBill('${bill.id}')" class="p-1.5 text-slate-600 hover:bg-slate-100 rounded-lg transition" title="${this.t('editTooltip')}">
+                                    <i class="fa-solid fa-pen"></i>
+                                </button>
+                                <button onclick="app.deleteBill('${bill.id}')" class="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg transition" title="${this.t('deleteTooltip')}">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    `;
+                    tableBody.appendChild(tr);
+
+                    // Card View (Mobile)
+                    const card = document.createElement("div");
+                    card.className = "p-4 space-y-3";
+                    card.innerHTML = `
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <span class="font-mono text-xs font-bold text-brand-700 bg-brand-50 px-2 py-0.5 rounded">${bill.id}</span>
+                                <h4 class="font-bold text-slate-900 text-base mt-1">${bill.customerName}</h4>
+                                <p class="text-xs text-slate-500">${bill.date} ${bill.phone ? '• ' + bill.phone : ''}</p>
+                            </div>
+                            <div class="text-right">
+                                <span class="text-lg font-extrabold text-slate-900 block">₹ ${bill.grandTotal.toLocaleString('en-IN')}</span>
+                                <span class="text-[11px] text-slate-500">${bill.items ? bill.items.length : 0} ${this.t('itemsWord')}</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-end space-x-2 pt-2 border-t border-slate-100">
+                            <button onclick="app.viewInvoice('${bill.id}')" class="px-3 py-1.5 bg-brand-50 text-brand-700 text-xs font-semibold rounded-lg">
+                                <i class="fa-solid fa-eye mr-1"></i> ${this.t('viewTooltip')}
+                            </button>
+                            <button onclick="app.editBill('${bill.id}')" class="px-3 py-1.5 bg-slate-100 text-slate-700 text-xs font-semibold rounded-lg">
+                                <i class="fa-solid fa-pen mr-1"></i> ${this.t('editBtn')}
+                            </button>
+                            <button onclick="app.deleteBill('${bill.id}')" class="px-3 py-1.5 bg-rose-50 text-rose-600 text-xs font-semibold rounded-lg">
+                                <i class="fa-solid fa-trash mr-1"></i> ${this.t('deleteBtnLabel')}
+                            </button>
+                        </div>
+                    `;
+                    cardsContainer.appendChild(card);
+                });
+            }
+
+            filterBills() {
+                const query = document.getElementById("search-input").value.toLowerCase().trim();
+                const trs = document.querySelectorAll("#bills-table-body tr");
+                const cards = document.querySelectorAll("#bills-card-container > div");
+
+                const sortedBills = this.getSortedBills();
+
+                sortedBills.forEach((bill, idx) => {
+                    const matchCustomer = bill.customerName.toLowerCase().includes(query);
+                    const matchItem = bill.items && bill.items.some(i => i.description.toLowerCase().includes(query));
+                    const matchBillId = bill.id.toLowerCase().includes(query);
+
+                    const isVisible = matchCustomer || matchItem || matchBillId;
+
+                    if (trs[idx]) trs[idx].style.display = isVisible ? "" : "none";
+                    if (cards[idx]) cards[idx].style.display = isVisible ? "" : "none";
+                });
+            }
+
+            async showDashboard() {
+                await this.flushAutoSave();
+                document.getElementById("dashboard-view").classList.remove("hidden");
+                document.getElementById("editor-view").classList.add("hidden");
+                document.getElementById("preview-view").classList.add("hidden");
+                this.renderDashboard();
+            }
+
+            async createNewBill() {
+                await this.flushAutoSave();
+                const nextNum = 1001 + this.bills.length;
+                this.currentBill = {
+                    id: "BILL-" + nextNum,
+                    customerName: "",
+                    phone: "",
+                    date: new Date().toISOString().split('T')[0],
+                    notes: "",
+                    items: [
+                        { description: "", quantity: 1, price: 0, total: 0 }
+                    ],
+                    grandTotal: 0
+                };
+                this.loadBillIntoEditor();
+                this.editorMode = "new";
+                document.getElementById("editor-title").textContent = this.t("createNewBillTitle");
+                document.getElementById("dashboard-view").classList.add("hidden");
+                document.getElementById("editor-view").classList.remove("hidden");
+                document.getElementById("preview-view").classList.add("hidden");
+            }
+
+            async editBill(billId) {
+                await this.flushAutoSave();
+                const bill = this.bills.find(b => b.id === billId);
+                if (!bill) return;
+                this.currentBill = JSON.parse(JSON.stringify(bill));
+                this.loadBillIntoEditor();
+                this.editorMode = "edit";
+                document.getElementById("editor-title").textContent = this.t("editBillTitle");
+                document.getElementById("dashboard-view").classList.add("hidden");
+                document.getElementById("editor-view").classList.remove("hidden");
+                document.getElementById("preview-view").classList.add("hidden");
+            }
+
+            loadBillIntoEditor() {
+                document.getElementById("bill-id-display").textContent = this.currentBill.id;
+                document.getElementById("bill-customer-name").value = this.currentBill.customerName || "";
+                document.getElementById("bill-customer-phone").value = this.currentBill.phone || "";
+                document.getElementById("bill-date").value = this.currentBill.date || new Date().toISOString().split('T')[0];
+                document.getElementById("bill-notes").value = this.currentBill.notes || "";
+
+                const tbody = document.getElementById("editor-items-body");
+                tbody.innerHTML = "";
+
+                if (this.currentBill.items && this.currentBill.items.length > 0) {
+                    this.currentBill.items.forEach((item, index) => {
+                        this.addItemRow(item, false);
+                    });
+                } else {
+                    this.addItemRow(undefined, false);
+                }
+
+                this.recalculateTotal();
+            }
+
+            addItemRow(itemData = { description: "", quantity: 1, price: 0, total: 0 }, triggerAutoSave = true) {
+                const tbody = document.getElementById("editor-items-body");
+                const rowCount = tbody.children.length + 1;
+
+                const tr = document.createElement("tr");
+                tr.className = "item-row hover:bg-slate-50/50 transition";
+                tr.innerHTML = `
+                    <td class="py-2.5 px-3 text-center text-slate-400 font-bold text-xs row-sno">${rowCount}</td>
+                    <td class="py-2.5 px-3">
+                        <input type="text" list="historical-items-list" value="${itemData.description}" placeholder="${this.t('itemNamePlaceholder')}"
+                               class="item-desc w-full px-3 py-1.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm font-medium"
+                               oninput="app.handleItemNameInput(this)">
+                    </td>
+                    <td class="py-2.5 px-3">
+                        <input type="number" min="1" value="${itemData.quantity}"
+                               class="item-qty w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-center focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm"
+                               oninput="app.handleItemFieldInput()">
+                    </td>
+                    <td class="py-2.5 px-3">
+                        <input type="number" min="0" step="any" value="${itemData.price}"
+                               class="item-price w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-right focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm font-semibold"
+                               oninput="app.handleItemFieldInput()">
+                    </td>
+                    <td class="py-2.5 px-3 text-right">
+                        <span class="item-line-total font-extrabold text-slate-900">₹ ${itemData.total || 0}</span>
+                    </td>
+                    <td class="py-2.5 px-2 text-center">
+                        <button type="button" onclick="app.removeItemRow(this)" class="p-1.5 text-slate-300 hover:text-rose-500 transition">
+                            <i class="fa-solid fa-xmark text-base"></i>
+                        </button>
+                    </td>
+                `;
+
+                tbody.appendChild(tr);
+                this.updateRowNumbers();
+
+                if (triggerAutoSave) {
+                    this.scheduleAutoSave();
+                }
+            }
+
+            removeItemRow(btn) {
+                const tbody = document.getElementById("editor-items-body");
+                if (tbody.children.length <= 1) {
+                    alert(this.t("alertAtLeastOneItem"));
+                    return;
+                }
+                const row = btn.closest("tr");
+                row.remove();
+                this.updateRowNumbers();
+                this.recalculateTotal();
+                this.scheduleAutoSave();
+            }
+
+            updateRowNumbers() {
+                const rows = document.querySelectorAll("#editor-items-body .item-row");
+                rows.forEach((row, index) => {
+                    const sno = row.querySelector(".row-sno");
+                    if (sno) sno.textContent = index + 1;
+                });
+            }
+
+            handleItemNameInput(inputElem) {
+                const val = inputElem.value.trim().toLowerCase();
+                const row = inputElem.closest("tr");
+                const priceInput = row.querySelector(".item-price");
+
+                if (val && this.historicalPrices[val]) {
+                    // Pre-fill price if matched in history
+                    priceInput.value = this.historicalPrices[val].lastPrice;
+                }
+                this.recalculateTotal();
+                this.scheduleAutoSave();
+            }
+
+            handleItemFieldInput() {
+                this.recalculateTotal();
+                this.scheduleAutoSave();
+            }
+
+            recalculateTotal() {
+                const rows = document.querySelectorAll("#editor-items-body .item-row");
+                let grandTotal = 0;
+                let totalItemsCount = 0;
+
+                rows.forEach(row => {
+                    const qty = parseFloat(row.querySelector(".item-qty").value) || 0;
+                    const price = parseFloat(row.querySelector(".item-price").value) || 0;
+                    const lineTotal = qty * price;
+
+                    row.querySelector(".item-line-total").textContent = "₹ " + lineTotal.toLocaleString('en-IN');
+                    grandTotal += lineTotal;
+                    totalItemsCount += qty;
+                });
+
+                document.getElementById("summary-items-count").textContent = totalItemsCount;
+                document.getElementById("summary-grand-total").textContent = "₹ " + grandTotal.toLocaleString('en-IN');
+            }
+
+            collectFormData() {
+                const customerName = document.getElementById("bill-customer-name").value.trim();
+                const phone = document.getElementById("bill-customer-phone").value.trim();
+                const date = document.getElementById("bill-date").value;
+                const notes = document.getElementById("bill-notes").value.trim();
+
+                const itemRows = document.querySelectorAll("#editor-items-body .item-row");
+                const items = [];
+                let grandTotal = 0;
+
+                itemRows.forEach(row => {
+                    const desc = row.querySelector(".item-desc").value.trim();
+                    const qty = parseFloat(row.querySelector(".item-qty").value) || 0;
+                    const price = parseFloat(row.querySelector(".item-price").value) || 0;
+                    const total = qty * price;
+
+                    if (desc) {
+                        items.push({ description: desc, quantity: qty, price: price, total: total });
+                        grandTotal += total;
+                    }
+                });
+
+                return { customerName, phone, date, notes, items, grandTotal };
+            }
+
+            async saveCurrentBill() {
+                const { customerName, phone, date, notes, items, grandTotal } = this.collectFormData();
+
+                if (!customerName) {
+                    alert(this.t("alertEnterCustomerName"));
+                    document.getElementById("bill-customer-name").focus();
+                    return;
+                }
+
+                if (items.length === 0) {
+                    alert(this.t("alertAtLeastOneItemName"));
+                    return;
+                }
+
+                clearTimeout(this._autoSaveTimer);
+
+                this.currentBill.customerName = customerName;
+                this.currentBill.phone = phone;
+                this.currentBill.date = date;
+                this.currentBill.notes = notes;
+                this.currentBill.items = items;
+                this.currentBill.grandTotal = grandTotal;
+                this.currentBill.updatedAt = new Date().toISOString();
+
+                try {
+                    await this.billsCollection.doc(this.currentBill.id).set(this.currentBill);
+                } catch (e) {
+                    alert("Failed to save bill: " + e.message);
+                    return;
+                }
+
+                this.showInvoicePreview(this.currentBill);
+            }
+
+            scheduleAutoSave() {
+                clearTimeout(this._autoSaveTimer);
+                this._autoSaveTimer = setTimeout(() => this.autoSaveDraft(), 800);
+            }
+
+            async flushAutoSave() {
+                if (this._autoSaveTimer) {
+                    clearTimeout(this._autoSaveTimer);
+                    this._autoSaveTimer = null;
+                    await this.autoSaveDraft();
+                }
+            }
+
+            async autoSaveDraft() {
+                if (!this.currentBill) return;
+
+                const { customerName, phone, date, notes, items, grandTotal } = this.collectFormData();
+
+                // Don't create a bill record until there's something worth saving.
+                if (!customerName && items.length === 0) return;
+
+                this.currentBill.customerName = customerName;
+                this.currentBill.phone = phone;
+                this.currentBill.date = date;
+                this.currentBill.notes = notes;
+                this.currentBill.items = items;
+                this.currentBill.grandTotal = grandTotal;
+                this.currentBill.updatedAt = new Date().toISOString();
+
+                try {
+                    await this.billsCollection.doc(this.currentBill.id).set(this.currentBill);
+                } catch (e) {
+                    console.error("Auto-save failed:", e);
+                }
+            }
+
+            async deleteBill(billId) {
+                if (confirm(this.t("confirmDeleteBill").replace("{id}", billId))) {
+                    try {
+                        await this.billsCollection.doc(billId).delete();
+                    } catch (e) {
+                        alert("Failed to delete bill: " + e.message);
+                    }
+                }
+            }
+
+            viewInvoice(billId) {
+                const bill = this.bills.find(b => b.id === billId);
+                if (!bill) return;
+                this.showInvoicePreview(bill);
+            }
+
+            showInvoicePreview(bill) {
+                this.currentBill = bill;
+
+                document.getElementById("prev-bill-id").textContent = bill.id;
+                document.getElementById("prev-bill-date").textContent = bill.date;
+                document.getElementById("prev-customer-name").textContent = bill.customerName;
+
+                if (bill.phone) {
+                    document.getElementById("prev-customer-phone").textContent = bill.phone;
+                    document.getElementById("prev-phone-container").classList.remove("hidden");
+                } else {
+                    document.getElementById("prev-phone-container").classList.add("hidden");
+                }
+
+                document.getElementById("prev-notes").textContent = bill.notes || this.t("defaultNotesFallback");
+                document.getElementById("prev-grand-total").textContent = "₹ " + bill.grandTotal.toLocaleString('en-IN');
+
+                const tbody = document.getElementById("prev-items-body");
+                tbody.innerHTML = "";
+
+                bill.items.forEach((item, index) => {
+                    const tr = document.createElement("tr");
+                    tr.className = "border-b border-slate-100";
+                    tr.innerHTML = `
+                        <td class="py-2.5 px-2 text-center text-slate-500 font-mono text-xs">${index + 1}</td>
+                        <td class="py-2.5 px-3 font-medium text-slate-900">${item.description}</td>
+                        <td class="py-2.5 px-2 text-center text-slate-700">${item.quantity}</td>
+                        <td class="py-2.5 px-3 text-right text-slate-700">₹ ${item.price.toLocaleString('en-IN')}</td>
+                        <td class="py-2.5 px-3 text-right font-bold text-slate-900">₹ ${item.total.toLocaleString('en-IN')}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+
+                document.getElementById("dashboard-view").classList.add("hidden");
+                document.getElementById("editor-view").classList.add("hidden");
+                document.getElementById("preview-view").classList.remove("hidden");
+            }
+
+            editCurrentPreviewBill() {
+                if (this.currentBill) {
+                    this.editBill(this.currentBill.id);
+                }
+            }
+
+            fillPrintArea() {
+                const printContent = document.getElementById("invoice-card").innerHTML;
+                document.getElementById("invoice-print-area").innerHTML = printContent;
+            }
+
+            printInvoice() {
+                this.fillPrintArea();
+                window.print();
+            }
+
+            exportPDF() {
+                // html2canvas-based export (html2pdf.js) cannot shape Tamil's
+                // complex script (conjuncts/vowel signs) correctly - it reimplements
+                // text layout in JS instead of using the browser's text engine.
+                // The browser's own print pipeline renders Tamil correctly (same as
+                // the Print button), so PDF export goes through print-to-PDF instead.
+                alert(this.t("pdfSaveHint"));
+                this.fillPrintArea();
+                window.print();
+            }
+
+            shareWhatsApp() {
+                if (!this.currentBill) return;
+
+                let message = `*ஸ்ரீ கோமதி   ஏஜென்சீஸ்*\n`;
+                message += `*${this.t("waBillNo")}* ${this.currentBill.id}\n`;
+                message += `*${this.t("waDate")}* ${this.currentBill.date}\n`;
+                message += `*${this.t("waCustomer")}* ${this.currentBill.customerName}\n\n`;
+                message += `*${this.t("waItemDetails")}*\n`;
+
+                this.currentBill.items.forEach((item, idx) => {
+                    message += `${idx + 1}. ${item.description} - ${item.quantity} x ₹${item.price} = ₹${item.total}\n`;
+                });
+
+                message += `\n*${this.t("waGrandTotal")} ₹${this.currentBill.grandTotal.toLocaleString('en-IN')}*\n`;
+                message += this.t("waThanks");
+
+                const encoded = encodeURIComponent(message);
+                const phone = this.currentBill.phone ? this.currentBill.phone.replace(/[^0-9]/g, '') : '';
+
+                if (phone && phone.length >= 10) {
+                    window.open(`https://wa.me/91${phone}?text=${encoded}`, '_blank');
+                } else {
+                    window.open(`https://wa.me/?text=${encoded}`, '_blank');
+                }
+            }
+        }
+
+        // Gate app initialization behind Google Sign-In
+        let app;
+        auth.onAuthStateChanged(user => {
+            const gate = document.getElementById("auth-gate");
+            const gateMsg = document.getElementById("auth-gate-message");
+            const container = document.getElementById("app-container");
+
+            const isAllowed = user && user.email &&
+                (ALLOWED_EMAILS.length === 0 || ALLOWED_EMAILS.includes(user.email.toLowerCase()));
+
+            if (isAllowed) {
+                gate.classList.add("hidden");
+                container.classList.remove("hidden");
+                if (!app) {
+                    app = new BillingApp(db, user.uid);
+                }
+            } else {
+                if (user) {
+                    gateMsg.textContent = "This Google account is not authorized to access this app.";
+                    auth.signOut();
+                }
+                if (app) {
+                    app.destroy();
+                    app = null;
+                }
+                container.classList.add("hidden");
+                gate.classList.remove("hidden");
+            }
+        });
+    </script>
+</body>
+</html>

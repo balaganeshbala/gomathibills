@@ -1,0 +1,15 @@
+# Firebase
+.firebase/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+
+# Claude Code local settings
+.claude/settings.local.json
+
+# Dependencies (in case any are added later)
+node_modules/
+
+# OS / editor
+.DS_Store
+*.swp
