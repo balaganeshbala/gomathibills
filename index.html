@@ -116,27 +116,44 @@
         <header class="no-print bg-slate-900 text-white sticky top-0 z-30 shadow-md">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="flex items-center justify-between h-16">
-                    <div class="flex items-center space-x-3 cursor-pointer" onclick="app.showDashboard()">
-                        <div class="bg-brand-600 p-2.5 rounded-xl shadow-lg flex items-center justify-center">
+                    <div class="flex items-center space-x-3 cursor-pointer min-w-0" onclick="app.showDashboard()">
+                        <div class="bg-brand-600 w-10 h-10 rounded-xl shadow-lg flex items-center justify-center shrink-0">
                             <i class="fa-solid font-bold fa-file-invoice-dollar text-xl text-white"></i>
                         </div>
-                        <div>
-                            <h1 class="font-bold text-lg sm:text-xl tracking-tight leading-tight">ஸ்ரீ கோமதி ஏஜென்சீஸ்</h1>
+                        <div class="min-w-0">
+                            <h1 class="font-bold text-lg sm:text-xl tracking-tight leading-tight truncate">ஸ்ரீ கோமதி ஏஜென்சீஸ்</h1>
                         </div>
                     </div>
 
-                    <div class="flex items-center space-x-3">
-                        <div class="flex items-center bg-slate-800 rounded-lg p-1 text-xs font-semibold no-print" id="lang-toggle">
+                    <div class="flex items-center space-x-3 shrink-0">
+                        <div class="hidden sm:flex items-center bg-slate-800 rounded-lg p-1 text-xs font-semibold no-print" id="lang-toggle-desktop">
                             <button onclick="app.setLanguage('ta')" data-lang-btn="ta" class="px-2.5 py-1.5 rounded-md transition">தமிழ்</button>
                             <button onclick="app.setLanguage('en')" data-lang-btn="en" class="px-2.5 py-1.5 rounded-md transition">English</button>
                         </div>
-                        <button onclick="app.createNewBill()" class="bg-brand-600 hover:bg-brand-500 text-white px-3 sm:px-4 py-2 rounded-lg font-medium text-sm flex items-center space-x-2 shadow-sm transition active:scale-95">
-                            <i class="fa-solid fa-plus"></i>
-                            <span data-i18n="newBill">புதிய பில்</span>
-                        </button>
-                        <button onclick="signOutUser()" title="Sign out" class="no-print p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition">
-                            <i class="fa-solid fa-right-from-bracket"></i>
-                        </button>
+
+                        <div class="relative no-print" id="user-menu">
+                            <button onclick="toggleUserMenu()" id="user-menu-btn" title="Account" class="w-9 h-9 rounded-full overflow-hidden border-2 border-slate-700 hover:border-brand-500 transition flex items-center justify-center bg-brand-600 text-white text-sm font-bold shrink-0">
+                                <img id="user-avatar-img" src="" alt="" class="hidden w-full h-full object-cover">
+                                <span id="user-avatar-fallback"></span>
+                            </button>
+                            <div id="user-dropdown" class="hidden absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-lg border border-slate-200 py-2 z-40 text-slate-800">
+                                <div class="px-4 py-3 border-b border-slate-100">
+                                    <p id="user-dropdown-name" class="font-semibold text-sm text-slate-900 truncate"></p>
+                                    <p id="user-dropdown-email" class="text-xs text-slate-500 truncate"></p>
+                                </div>
+                                <button onclick="signOutUser()" class="w-full flex items-center space-x-2 px-4 py-2.5 text-sm text-rose-600 hover:bg-rose-50 transition">
+                                    <i class="fa-solid fa-right-from-bracket"></i>
+                                    <span data-i18n="signOutBtn">வெளியேறு</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-end pb-3 sm:hidden">
+                    <div class="flex items-center bg-slate-800 rounded-lg p-1 text-xs font-semibold no-print" id="lang-toggle-mobile">
+                        <button onclick="app.setLanguage('ta')" data-lang-btn="ta" class="px-2.5 py-1.5 rounded-md transition">தமிழ்</button>
+                        <button onclick="app.setLanguage('en')" data-lang-btn="en" class="px-2.5 py-1.5 rounded-md transition">English</button>
                     </div>
                 </div>
             </div>
@@ -147,6 +164,13 @@
 
             <!-- DASHBOARD VIEW -->
             <section id="dashboard-view" class="space-y-6">
+
+                <div class="no-print flex justify-end">
+                    <button onclick="app.createNewBill()" class="bg-brand-600 hover:bg-brand-500 text-white px-3 sm:px-4 py-2 rounded-lg font-medium text-sm flex items-center space-x-2 shadow-sm transition active:scale-95">
+                        <i class="fa-solid fa-plus"></i>
+                        <span data-i18n="newBill">புதிய பில்</span>
+                    </button>
+                </div>
 
                 <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200/80 flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div class="relative flex-1 min-w-0">
@@ -286,9 +310,9 @@
                                     <tr class="bg-slate-50 text-slate-600 font-semibold text-xs uppercase tracking-wider border-b border-slate-200">
                                         <th class="py-3 px-3 text-center w-12" data-i18n="colSno">வ.எண்</th>
                                         <th class="py-3 px-4" data-i18n="colItemDesc">பொருள்</th>
-                                        <th class="py-3 px-3 w-28 text-center" data-i18n="colQty">எண்ணிக்கை</th>
-                                        <th class="py-3 px-3 w-32 text-right" data-i18n="colPrice">விலை (₹)</th>
-                                        <th class="py-3 px-3 w-36 text-right" data-i18n="colTotal">மொத்தம் (₹)</th>
+                                        <th class="py-3 px-3 w-20 sm:w-28 text-center" data-i18n="colQty">எண்ணிக்கை</th>
+                                        <th class="py-3 px-3 w-24 sm:w-32 text-right" data-i18n="colPrice">விலை (₹)</th>
+                                        <th class="py-3 px-3 w-28 sm:w-36 text-right" data-i18n="colTotal">மொத்தம் (₹)</th>
                                         <th class="py-3 px-2 text-center w-12"></th>
                                     </tr>
                                 </thead>
@@ -355,8 +379,8 @@
                             <span data-i18n="pdfBtn">PDF பதிவிறக்கம்</span>
                         </button>
 
-                        <button onclick="app.shareWhatsApp()" class="hidden inline-flex items-center space-x-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium rounded-xl shadow-sm transition">
-                            <i class="fa-brands fa-whatsapp text-lg"></i>
+                        <button onclick="app.shareWhatsApp()" class="inline-flex items-center space-x-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium rounded-xl shadow-sm transition">
+                            <i class="fa-brands fa-whatsapp"></i>
                             <span data-i18n="whatsappBtn">பகிர்</span>
                         </button>
                     </div>
@@ -472,6 +496,42 @@
             auth.signOut();
         }
 
+        function toggleUserMenu() {
+            document.getElementById("user-dropdown").classList.toggle("hidden");
+        }
+
+        function closeUserMenu() {
+            document.getElementById("user-dropdown").classList.add("hidden");
+        }
+
+        document.addEventListener("click", (e) => {
+            const menu = document.getElementById("user-menu");
+            if (menu && !menu.contains(e.target)) {
+                closeUserMenu();
+            }
+        });
+
+        function renderUserMenu(user) {
+            const img = document.getElementById("user-avatar-img");
+            const fallback = document.getElementById("user-avatar-fallback");
+            const nameEl = document.getElementById("user-dropdown-name");
+            const emailEl = document.getElementById("user-dropdown-email");
+
+            const displayName = user.displayName || user.email || "";
+            nameEl.textContent = displayName;
+            emailEl.textContent = user.email || "";
+
+            if (user.photoURL) {
+                img.src = user.photoURL;
+                img.classList.remove("hidden");
+                fallback.classList.add("hidden");
+            } else {
+                img.classList.add("hidden");
+                fallback.classList.remove("hidden");
+                fallback.textContent = (displayName.trim()[0] || "?").toUpperCase();
+            }
+        }
+
         const I18N = {
             ta: {
                 newBill: "புதிய பில்",
@@ -544,6 +604,7 @@
                 deleteTooltip: "நீக்க",
                 deleteBtnLabel: "நீக்கு",
                 pdfSaveHint: "அடுத்த திரையில், 'Destination' / 'Printer' பட்டியலில் இருந்து 'Save as PDF' என்பதைத் தேர்ந்தெடுத்து சேமிக்கவும்.",
+                signOutBtn: "வெளியேறு",
             },
             en: {
                 newBill: "New Bill",
@@ -615,7 +676,8 @@
                 editTooltip: "Edit",
                 deleteTooltip: "Delete",
                 deleteBtnLabel: "Delete",
-                pdfSaveHint: "In the next screen, choose 'Save as PDF' from the Destination/Printer list to save it."
+                pdfSaveHint: "In the next screen, choose 'Save as PDF' from the Destination/Printer list to save it.",
+                signOutBtn: "Sign out"
             }
         };
 
@@ -1244,6 +1306,7 @@
             if (isAllowed) {
                 gate.classList.add("hidden");
                 container.classList.remove("hidden");
+                renderUserMenu(user);
                 if (!app) {
                     app = new BillingApp(db, user.uid);
                 }
