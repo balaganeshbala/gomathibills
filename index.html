@@ -454,21 +454,21 @@
     </div>
 
     <!-- Post-download Share Popup -->
-    <div id="share-popup" class="no-print hidden fixed inset-x-0 bottom-0 z-50 p-4 sm:p-6 sm:flex sm:justify-end">
-        <div class="max-w-sm w-full bg-white border border-slate-200 rounded-2xl shadow-xl p-4 flex items-start gap-3">
-            <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-                <i class="fa-solid fa-file-pdf text-lg"></i>
+    <div id="share-popup" class="no-print hidden flex fixed inset-0 z-50 items-center justify-center p-4 bg-slate-900/60" onclick="if (event.target === this) app.hideSharePopup()">
+        <div class="max-w-sm w-full bg-white rounded-2xl shadow-xl p-6 flex flex-col items-center text-center gap-3">
+            <div class="w-14 h-14 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                <i class="fa-solid fa-file-pdf text-2xl"></i>
             </div>
-            <div class="flex-1 min-w-0">
-                <p class="text-sm font-semibold text-slate-800" data-i18n="pdfDownloadedTitle">PDF downloaded</p>
-                <p class="text-xs text-slate-500 mt-0.5" data-i18n="pdfDownloadedSubtitle">Want to share it on WhatsApp or another app?</p>
-                <div class="flex items-center gap-2 mt-3">
-                    <button onclick="app.shareDownloadedPdf()" class="inline-flex items-center space-x-1.5 px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg transition">
-                        <i class="fa-solid fa-share-nodes"></i>
-                        <span data-i18n="shareBtn">Share</span>
-                    </button>
-                    <button onclick="app.hideSharePopup()" class="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-semibold rounded-lg transition" data-i18n="notNowBtn">Not now</button>
-                </div>
+            <div>
+                <p class="text-base font-semibold text-slate-800" data-i18n="pdfDownloadedTitle">PDF downloaded</p>
+                <p class="text-sm text-slate-500 mt-1" data-i18n="pdfDownloadedSubtitle">Want to share it on WhatsApp or another app?</p>
+            </div>
+            <div class="flex items-center gap-2 mt-3 w-full">
+                <button onclick="app.hideSharePopup()" class="flex-1 px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 text-sm font-semibold rounded-xl transition" data-i18n="notNowBtn">Not now</button>
+                <button onclick="app.shareDownloadedPdf()" class="flex-1 inline-flex items-center justify-center space-x-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-xl transition">
+                    <i class="fa-solid fa-share-nodes"></i>
+                    <span data-i18n="shareBtn">Share</span>
+                </button>
             </div>
         </div>
     </div>
