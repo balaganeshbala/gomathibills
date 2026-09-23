@@ -1433,28 +1433,44 @@
                 if (!this.currentBill) return;
                 const bill = this.currentBill;
                 const message = this.buildWhatsAppMessage(bill);
+                const originalHtml = btn ? btn.innerHTML : null;
 
-                if (navigator.share && navigator.canShare) {
-                    const originalHtml = btn ? btn.innerHTML : null;
-                    try {
-                        if (btn) {
-                            btn.disabled = true;
-                            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i><span>...</span>';
-                        }
-                        const blob = await this.generatePdfBlob(bill);
+                try {
+                    if (btn) {
+                        btn.disabled = true;
+                        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i><span>...</span>';
+                    }
+
+                    const blob = await this.generatePdfBlob(bill);
+
+                    if (navigator.share && navigator.canShare) {
                         const file = new File([blob], `${bill.id}.pdf`, { type: "application/pdf" });
                         if (navigator.canShare({ files: [file] })) {
-                            await navigator.share({ files: [file], text: message });
-                            return;
+                            try {
+                                await navigator.share({ files: [file], text: message });
+                                return;
+                            } catch (e) {
+                                if (e.name === "AbortError") return; // user cancelled the share sheet
+                                console.warn("navigator.share failed, opening the PDF in a new tab instead:", e);
+                            }
+                        } else {
+                            console.warn("navigator.canShare({files}) returned false for a PDF on this browser.");
                         }
-                    } catch (e) {
-                        if (e.name === "AbortError") return; // user cancelled the share sheet
-                        console.error("PDF share failed, falling back to text share:", e);
-                    } finally {
-                        if (btn && originalHtml !== null) {
-                            btn.disabled = false;
-                            btn.innerHTML = originalHtml;
-                        }
+                    } else {
+                        console.warn("navigator.share/canShare not available on this browser.");
+                    }
+
+                    // Fallback: open the PDF in a new tab. Most mobile browsers'
+                    // built-in PDF viewer has its own share/print icon, letting the
+                    // user attach it to WhatsApp manually.
+                    const url = URL.createObjectURL(blob);
+                    window.open(url, '_blank');
+                } catch (e) {
+                    console.error("PDF generation failed, falling back to text-only WhatsApp share:", e);
+                } finally {
+                    if (btn && originalHtml !== null) {
+                        btn.disabled = false;
+                        btn.innerHTML = originalHtml;
                     }
                 }
 
