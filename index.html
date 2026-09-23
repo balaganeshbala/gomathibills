@@ -1376,6 +1376,24 @@
                         btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i><span>...</span>';
                     }
                     const blob = await this.generatePdfBlob(this.currentBill);
+
+                    if (navigator.share && navigator.canShare) {
+                        const file = new File([blob], `${this.currentBill.id}.pdf`, { type: "application/pdf" });
+                        if (navigator.canShare({ files: [file] })) {
+                            try {
+                                await navigator.share({ files: [file] });
+                                return;
+                            } catch (e) {
+                                if (e.name === "AbortError") return; // user cancelled the share sheet
+                                console.warn("navigator.share failed, falling back to download:", e);
+                            }
+                        } else {
+                            console.warn("navigator.canShare({files}) returned false for a PDF on this browser.");
+                        }
+                    } else {
+                        console.warn("navigator.share/canShare not available on this browser.");
+                    }
+
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement("a");
                     a.href = url;
