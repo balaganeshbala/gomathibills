@@ -453,6 +453,26 @@
         <!-- Replicated cleanly for native print dialog -->
     </div>
 
+    <!-- Post-download Share Popup -->
+    <div id="share-popup" class="no-print hidden fixed inset-x-0 bottom-0 z-50 p-4 sm:p-6 sm:flex sm:justify-end">
+        <div class="max-w-sm w-full bg-white border border-slate-200 rounded-2xl shadow-xl p-4 flex items-start gap-3">
+            <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                <i class="fa-solid fa-file-pdf text-lg"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+                <p class="text-sm font-semibold text-slate-800" data-i18n="pdfDownloadedTitle">PDF downloaded</p>
+                <p class="text-xs text-slate-500 mt-0.5" data-i18n="pdfDownloadedSubtitle">Want to share it on WhatsApp or another app?</p>
+                <div class="flex items-center gap-2 mt-3">
+                    <button onclick="app.shareDownloadedPdf()" class="inline-flex items-center space-x-1.5 px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg transition">
+                        <i class="fa-solid fa-share-nodes"></i>
+                        <span data-i18n="shareBtn">Share</span>
+                    </button>
+                    <button onclick="app.hideSharePopup()" class="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-semibold rounded-lg transition" data-i18n="notNowBtn">Not now</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Firebase (Auth + Firestore) -->
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
@@ -605,6 +625,10 @@
                 deleteBtnLabel: "நீக்கு",
                 pdfSaveHint: "அடுத்த திரையில், 'Destination' / 'Printer' பட்டியலில் இருந்து 'Save as PDF' என்பதைத் தேர்ந்தெடுத்து சேமிக்கவும்.",
                 signOutBtn: "வெளியேறு",
+                pdfDownloadedTitle: "PDF பதிவிறக்கம் ஆனது",
+                pdfDownloadedSubtitle: "நீங்கள் இதை WhatsApp அல்லது வேறு ஆப்பில் பகிர விரும்புகிறீர்களா?",
+                shareBtn: "பகிர்",
+                notNowBtn: "வேண்டாம்",
             },
             en: {
                 newBill: "New Bill",
@@ -677,7 +701,11 @@
                 deleteTooltip: "Delete",
                 deleteBtnLabel: "Delete",
                 pdfSaveHint: "In the next screen, choose 'Save as PDF' from the Destination/Printer list to save it.",
-                signOutBtn: "Sign out"
+                signOutBtn: "Sign out",
+                pdfDownloadedTitle: "PDF downloaded",
+                pdfDownloadedSubtitle: "Want to share it on WhatsApp or another app?",
+                shareBtn: "Share",
+                notNowBtn: "Not now"
             }
         };
 
@@ -1376,32 +1404,21 @@
                         btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i><span>...</span>';
                     }
                     const blob = await this.generatePdfBlob(this.currentBill);
-
-                    if (navigator.share && navigator.canShare) {
-                        const file = new File([blob], `${this.currentBill.id}.pdf`, { type: "application/pdf" });
-                        if (navigator.canShare({ files: [file] })) {
-                            try {
-                                await navigator.share({ files: [file] });
-                                return;
-                            } catch (e) {
-                                if (e.name === "AbortError") return; // user cancelled the share sheet
-                                console.warn("navigator.share failed, falling back to download:", e);
-                            }
-                        } else {
-                            console.warn("navigator.canShare({files}) returned false for a PDF on this browser.");
-                        }
-                    } else {
-                        console.warn("navigator.share/canShare not available on this browser.");
-                    }
-
+                    const fileName = `${this.currentBill.id}.pdf`;
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement("a");
                     a.href = url;
-                    a.download = `${this.currentBill.id}.pdf`;
+                    a.download = fileName;
                     document.body.appendChild(a);
                     a.click();
                     a.remove();
                     URL.revokeObjectURL(url);
+
+                    this.pendingSharePdf = { blob, fileName };
+                    if (navigator.share && navigator.canShare &&
+                        navigator.canShare({ files: [new File([blob], fileName, { type: "application/pdf" })] })) {
+                        this.showSharePopup();
+                    }
                 } catch (e) {
                     console.error("PDF generation failed, falling back to print:", e);
                     alert(this.t("pdfSaveHint"));
@@ -1413,6 +1430,32 @@
                         btn.innerHTML = originalHtml;
                     }
                 }
+            }
+
+            showSharePopup() {
+                document.getElementById("share-popup").classList.remove("hidden");
+            }
+
+            hideSharePopup() {
+                document.getElementById("share-popup").classList.add("hidden");
+                this.pendingSharePdf = null;
+            }
+
+            async shareDownloadedPdf() {
+                if (!this.pendingSharePdf) {
+                    this.hideSharePopup();
+                    return;
+                }
+                const { blob, fileName } = this.pendingSharePdf;
+                const file = new File([blob], fileName, { type: "application/pdf" });
+                try {
+                    await navigator.share({ files: [file] });
+                } catch (e) {
+                    if (e.name !== "AbortError") {
+                        console.error("Share failed:", e);
+                    }
+                }
+                this.hideSharePopup();
             }
 
             buildWhatsAppMessage(bill) {
