@@ -4,6 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gomathi Bills</title>
+    <!-- Favicon & App Icons -->
+    <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16x16.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0284c7">
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Noto Sans Tamil & Inter Fonts -->
@@ -90,8 +96,13 @@
 </head>
 <body class="h-full text-slate-800 antialiased selection:bg-brand-500 selection:text-white">
 
+    <!-- Auth Loading (shown until Firebase resolves the persisted session) -->
+    <div id="auth-loading" class="fixed inset-0 z-50 bg-slate-900 flex items-center justify-center p-6">
+        <i class="fa-solid fa-circle-notch fa-spin text-white text-3xl"></i>
+    </div>
+
     <!-- Auth Gate -->
-    <div id="auth-gate" class="fixed inset-0 z-50 bg-slate-900 flex items-center justify-center p-6">
+    <div id="auth-gate" class="hidden fixed inset-0 z-50 bg-slate-900 flex items-center justify-center p-6">
         <div class="bg-white rounded-2xl shadow-xl p-8 max-w-sm w-full text-center space-y-4">
             <div class="w-14 h-14 bg-brand-600 rounded-2xl flex items-center justify-center mx-auto text-white text-2xl">
                 <i class="fa-solid fa-file-invoice-dollar"></i>
@@ -121,7 +132,7 @@
                             <i class="fa-solid font-bold fa-file-invoice-dollar text-xl text-white"></i>
                         </div>
                         <div class="min-w-0">
-                            <h1 class="font-bold text-lg sm:text-xl tracking-tight leading-tight truncate">ஸ்ரீ கோமதி ஏஜென்சீஸ்</h1>
+                            <h1 class="font-bold text-lg sm:text-xl tracking-tight leading-tight truncate" data-i18n="shopName">ஸ்ரீ கோமதி ஏஜென்சீஸ்</h1>
                         </div>
                     </div>
 
@@ -386,7 +397,7 @@
                         <!-- Invoice Header -->
                         <div class="flex flex-col sm:flex-row justify-between items-start border-b-2 border-slate-800 pb-6 gap-4">
                             <div>
-                                <h2 class="text-1xl sm:text-2xl font-extrabold text-slate-900 tracking-tight font-tamil">ஸ்ரீ கோமதி ஏஜென்சீஸ்</h2>
+                                <h2 class="text-1xl sm:text-2xl font-extrabold text-slate-900 tracking-tight font-tamil" data-i18n="shopName">ஸ்ரீ கோமதி ஏஜென்சீஸ்</h2>
                                 <p class="text-xs text-slate-500 mt-0.5">1/308/8, C.O Colony, VOC Street, Sattur Main Road, Virudhunagar - 626002</p>
                                 <p class="text-xs font-bold text-slate-500 mt-0.5"><span data-i18n="phoneCellLabel">செல்:</span> +91 97902 28005</p>
                             </div>
@@ -554,6 +565,7 @@
 
         const I18N = {
             ta: {
+                shopName: "ஸ்ரீ கோமதி ஏஜென்சீஸ்",
                 newBill: "புதிய பில்",
                 backToList: "திரும்பு",
                 saveBill: "சேமி",
@@ -631,6 +643,7 @@
                 notNowBtn: "வேண்டாம்",
             },
             en: {
+                shopName: "Sri Gomathi Agencies",
                 newBill: "New Bill",
                 backToList: "Back to List",
                 saveBill: "Save Bill",
@@ -1344,7 +1357,7 @@
 <body>
     <div class="header">
         <div>
-            <h1 class="shop-name">ஸ்ரீ கோமதி ஏஜென்சீஸ்</h1>
+            <h1 class="shop-name">${esc(this.t('shopName'))}</h1>
             <p class="shop-addr">1/308/8, C.O Colony, VOC Street, Sattur Main Road, Virudhunagar - 626002</p>
             <p class="shop-addr"><strong>${esc(this.t('phoneCellLabel'))}</strong> +91 97902 28005</p>
         </div>
@@ -1537,9 +1550,12 @@
         // Gate app initialization behind Google Sign-In
         let app;
         auth.onAuthStateChanged(user => {
+            const loading = document.getElementById("auth-loading");
             const gate = document.getElementById("auth-gate");
             const gateMsg = document.getElementById("auth-gate-message");
             const container = document.getElementById("app-container");
+
+            loading.classList.add("hidden");
 
             const isAllowed = user && user.email &&
                 (ALLOWED_EMAILS.length === 0 || ALLOWED_EMAILS.includes(user.email.toLowerCase()));
