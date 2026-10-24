@@ -202,9 +202,13 @@
                 <div class="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden">
                     <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
                         <h2 class="font-bold text-slate-800 text-base flex items-center space-x-2">
-                            <i class="fa-solid fa-list-check text-brand-600"></i>
-                            <span data-i18n="billsHistoryTitle">பில்கள் பட்டியல்</span>
+                            <i id="bills-list-icon" class="fa-solid fa-list-check text-brand-600"></i>
+                            <span id="bills-list-title">பில்கள் பட்டியல்</span>
                         </h2>
+                        <button id="trash-toggle-btn" onclick="app.toggleTrashView()" class="no-print inline-flex items-center space-x-2 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-lg transition">
+                            <i id="trash-toggle-icon" class="fa-solid fa-trash-can"></i>
+                            <span id="trash-toggle-label"></span>
+                        </button>
                     </div>
 
                     <!-- Desktop Bills Table -->
@@ -242,6 +246,15 @@
                             <i class="fa-solid fa-plus"></i>
                             <span data-i18n="createBillBtn">உருவாக்குக</span>
                         </button>
+                    </div>
+
+                    <!-- Trash empty state -->
+                    <div id="no-trash-message" class="hidden p-12 text-center">
+                        <div class="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto text-slate-400 text-2xl mb-3">
+                            <i class="fa-regular fa-trash-can"></i>
+                        </div>
+                        <h3 class="font-bold text-slate-700" data-i18n="trashEmptyTitle">குப்பைத் தொட்டி காலியாக உள்ளது</h3>
+                        <p class="text-sm text-slate-500 mt-1" data-i18n="trashEmptySubtitle">நீக்கப்பட்ட பில்கள் இங்கே இருக்கும். எப்போது வேண்டுமானாலும் மீட்டெடுக்கலாம்.</p>
                     </div>
                 </div>
             </section>
@@ -484,6 +497,23 @@
         </div>
     </div>
 
+    <!-- App dialog (replaces the browser's alert/confirm, which can be suppressed via "Don't show again") -->
+    <div id="app-dialog" class="no-print hidden flex fixed inset-0 z-[60] items-center justify-center p-4 bg-slate-900/60" onclick="if (event.target === this) closeAppDialog(false)">
+        <div role="dialog" aria-modal="true" aria-labelledby="app-dialog-title" class="max-w-sm w-full bg-white rounded-2xl shadow-xl p-6 flex flex-col items-center text-center gap-3">
+            <div id="app-dialog-icon-wrap" class="w-14 h-14 rounded-xl flex items-center justify-center shrink-0">
+                <i id="app-dialog-icon" class="text-2xl"></i>
+            </div>
+            <div>
+                <p id="app-dialog-title" class="text-base font-semibold text-slate-800"></p>
+                <p id="app-dialog-message" class="text-sm text-slate-500 mt-1 whitespace-pre-line"></p>
+            </div>
+            <div class="flex items-center gap-2 mt-3 w-full">
+                <button id="app-dialog-cancel" onclick="closeAppDialog(false)" class="flex-1 px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 text-sm font-semibold rounded-xl transition"></button>
+                <button id="app-dialog-ok" onclick="closeAppDialog(true)" class="flex-1 px-3.5 py-2 text-white text-sm font-semibold rounded-xl transition"></button>
+            </div>
+        </div>
+    </div>
+
     <!-- Firebase (Auth + Firestore) -->
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
@@ -515,11 +545,72 @@
         // can't shape Tamil conjuncts/vowel signs correctly.
         const PDF_API_URL = "https://htmlpdfgen.vercel.app/api/pdf";
 
+        const DIALOG_TONES = {
+            info:   { icon: "fa-solid fa-circle-info",            wrap: "bg-brand-50 text-brand-600",  ok: "bg-brand-600 hover:bg-brand-700" },
+            error:  { icon: "fa-solid fa-circle-exclamation",     wrap: "bg-rose-50 text-rose-600",    ok: "bg-brand-600 hover:bg-brand-700" },
+            trash:  { icon: "fa-solid fa-trash",                  wrap: "bg-amber-50 text-amber-600",  ok: "bg-amber-600 hover:bg-amber-700" },
+            danger: { icon: "fa-solid fa-triangle-exclamation",   wrap: "bg-rose-50 text-rose-600",    ok: "bg-rose-600 hover:bg-rose-700" }
+        };
+        let appDialogResolve = null;
+        let appDialogQueue = Promise.resolve();
+
+        function uiText(key) {
+            const lang = (app && app.lang) || localStorage.getItem("sevar_lang") || "ta";
+            return (I18N[lang] && I18N[lang][key]) || key;
+        }
+
+        // Shows the in-app dialog; resolves true for OK/confirm, false for cancel.
+        // Dialogs are queued so one never replaces another that's still open.
+        function showAppDialog({ title = "", message = "", tone = "info", okLabel, cancelLabel = null }) {
+            const run = appDialogQueue.then(() => new Promise(resolve => {
+                const t = DIALOG_TONES[tone] || DIALOG_TONES.info;
+                document.getElementById("app-dialog-icon-wrap").className = `w-14 h-14 rounded-xl flex items-center justify-center shrink-0 ${t.wrap}`;
+                document.getElementById("app-dialog-icon").className = `${t.icon} text-2xl`;
+                const titleEl = document.getElementById("app-dialog-title");
+                titleEl.textContent = title;
+                titleEl.classList.toggle("hidden", !title);
+                document.getElementById("app-dialog-message").textContent = message;
+
+                const okBtn = document.getElementById("app-dialog-ok");
+                okBtn.textContent = okLabel || uiText("okBtn");
+                okBtn.className = `flex-1 px-3.5 py-2 text-white text-sm font-semibold rounded-xl transition ${t.ok}`;
+                const cancelBtn = document.getElementById("app-dialog-cancel");
+                cancelBtn.textContent = cancelLabel || "";
+                cancelBtn.classList.toggle("hidden", !cancelLabel);
+
+                appDialogResolve = resolve;
+                document.getElementById("app-dialog").classList.remove("hidden");
+                (cancelLabel ? cancelBtn : okBtn).focus();
+            }));
+            appDialogQueue = run.catch(() => {});
+            return run;
+        }
+
+        function closeAppDialog(result) {
+            if (!appDialogResolve) return;
+            document.getElementById("app-dialog").classList.add("hidden");
+            const resolve = appDialogResolve;
+            appDialogResolve = null;
+            resolve(result);
+        }
+
+        document.addEventListener("keydown", e => {
+            if (appDialogResolve && e.key === "Escape") closeAppDialog(false);
+        });
+
+        function appAlert(message, tone = "info") {
+            return showAppDialog({ message, tone });
+        }
+
+        function appConfirm({ title, message, okLabel, tone = "danger" }) {
+            return showAppDialog({ title, message, okLabel, tone, cancelLabel: uiText("cancelBtn") });
+        }
+
         function signInWithGoogle() {
             const provider = new firebase.auth.GoogleAuthProvider();
             auth.signInWithPopup(provider).catch(err => {
                 console.error(err);
-                alert("Sign-in failed: " + err.message);
+                appAlert("Sign-in failed: " + err.message, "error");
             });
         }
 
@@ -605,7 +696,22 @@
                 alertEnterCustomerName: "தயவுசெய்து வாடிக்கையாளர் பெயரை உள்ளிடவும்!",
                 alertAtLeastOneItemName: "குறைந்தது ஒரு பொருளின் பெயராவது இருக்க வேண்டும்!",
                 alertAtLeastOneItem: "குறைந்தது ஒரு பொருள் இருக்க வேண்டும்!",
-                confirmDeleteBill: "பில் எண் {id} ஐ நிச்சயம் நீக்க வேண்டுமா?",
+                confirmDeleteBill: "பில் எண் {id} ஐ குப்பைத் தொட்டிக்கு நகர்த்த வேண்டுமா? பின்னர் மீட்டெடுக்கலாம்.",
+                confirmDeleteForever: "பில் எண் {id} ஐ நிரந்தரமாக நீக்க வேண்டுமா? இதை மீண்டும் பெற முடியாது.",
+                trashTitle: "குப்பைத் தொட்டி",
+                okBtn: "சரி",
+                cancelBtn: "ரத்து",
+                moveBtn: "நகர்த்து",
+                confirmDeleteTitle: "குப்பைத் தொட்டிக்கு நகர்த்தவா?",
+                confirmDeleteForeverTitle: "நிரந்தரமாக நீக்கவா?",
+                trashBtn: "குப்பைத் தொட்டி",
+                backToBillsBtn: "பில்களுக்குத் திரும்பு",
+                restoreBtn: "மீட்டெடு",
+                deleteForeverBtn: "நிரந்தரமாக நீக்கு",
+                trashEmptyTitle: "குப்பைத் தொட்டி காலியாக உள்ளது",
+                trashEmptySubtitle: "நீக்கப்பட்ட பில்கள் இங்கே இருக்கும். எப்போது வேண்டுமானாலும் மீட்டெடுக்கலாம்.",
+                alertOfflineNewBill: "புதிய பில் உருவாக்க இணைய இணைப்பு தேவை. இணைப்பைச் சரிபார்த்து மீண்டும் முயற்சிக்கவும்.",
+                alertSyncingNewBill: "பில்கள் இன்னும் ஏற்றப்படுகின்றன. சில வினாடிகள் கழித்து மீண்டும் முயற்சிக்கவும்.",
                 defaultNotesFallback: "-",
                 waBillNo: "பில் எண்:",
                 waDate: "தேதி:",
@@ -683,7 +789,22 @@
                 alertEnterCustomerName: "Please enter customer name!",
                 alertAtLeastOneItemName: "At least one item name is required!",
                 alertAtLeastOneItem: "At least one item is required!",
-                confirmDeleteBill: "Are you sure you want to delete bill {id}?",
+                confirmDeleteBill: "Move bill {id} to trash? You can restore it later.",
+                confirmDeleteForever: "Permanently delete bill {id}? This cannot be undone.",
+                trashTitle: "Trash",
+                okBtn: "OK",
+                cancelBtn: "Cancel",
+                moveBtn: "Move",
+                confirmDeleteTitle: "Move to trash?",
+                confirmDeleteForeverTitle: "Delete forever?",
+                trashBtn: "Trash",
+                backToBillsBtn: "Back to bills",
+                restoreBtn: "Restore",
+                deleteForeverBtn: "Delete forever",
+                trashEmptyTitle: "Trash is empty",
+                trashEmptySubtitle: "Deleted bills stay here. You can restore them anytime.",
+                alertOfflineNewBill: "An internet connection is needed to create a new bill. Please check your connection and try again.",
+                alertSyncingNewBill: "Bills are still loading. Please try again in a few seconds.",
                 defaultNotesFallback: "-",
                 waBillNo: "Bill No:",
                 waDate: "Date:",
@@ -728,6 +849,10 @@
                 this.billsCollection = db.collection("users").doc(uid).collection("bills");
                 this.bills = [];
                 this.currentBill = null;
+                this.isNewBill = false; // true until the current bill's number is claimed in Firestore
+                this.billsSynced = false; // true once the bill list has been confirmed by the server
+                this.showingTrash = false;
+                this._saveChain = Promise.resolve();
                 this.historicalPrices = {}; // Map of item -> latest price
                 this.lang = localStorage.getItem("sevar_lang") || "ta";
                 this.editorMode = null;
@@ -794,19 +919,27 @@
 
             init() {
                 this.applyLanguage();
-                this.unsubscribeBills = this.billsCollection.onSnapshot(snapshot => {
-                    this.bills = snapshot.docs.map(doc => doc.data());
-                    this.buildHistoricalPricesMap();
-                    this.updateItemDatalist();
-                    if (document.getElementById("bills-table-body")) {
-                        this.renderDashboard();
-                    }
+                this.unsubscribeBills = this.billsCollection.onSnapshot({ includeMetadataChanges: true }, snapshot => {
+                    this.handleBillsSnapshot(snapshot);
                 }, err => {
                     if (!this.destroyed) {
                         console.error("Failed to sync bills:", err);
-                        alert("Could not sync bills: " + err.message);
+                        appAlert("Could not sync bills: " + err.message, "error");
                     }
                 });
+            }
+
+            handleBillsSnapshot(snapshot) {
+                if (this.destroyed) return;
+                if (!snapshot.metadata.fromCache) {
+                    this.billsSynced = true;
+                }
+                this.bills = snapshot.docs.map(doc => doc.data());
+                this.buildHistoricalPricesMap();
+                this.updateItemDatalist();
+                if (document.getElementById("bills-table-body")) {
+                    this.renderDashboard();
+                }
             }
 
             destroy() {
@@ -819,7 +952,7 @@
             buildHistoricalPricesMap() {
                 this.historicalPrices = {};
                 // Process bills chronologically to keep the latest price
-                const sorted = [...this.bills].sort((a, b) => new Date(a.date) - new Date(b.date));
+                const sorted = this.bills.filter(b => !b.isInTrash).sort((a, b) => new Date(a.date) - new Date(b.date));
                 sorted.forEach(bill => {
                     if (bill.items) {
                         bill.items.forEach(item => {
@@ -849,10 +982,14 @@
 
             getSortedBills() {
                 const dir = this.sortDir === "asc" ? 1 : -1;
-                return [...this.bills].sort((a, b) => {
+                // Trashed bills stay in this.bills so their numbers are never reused.
+                const visible = this.bills.filter(b => !!b.isInTrash === this.showingTrash);
+                return visible.sort((a, b) => {
                     let cmp = 0;
                     if (this.sortField === "date") {
-                        cmp = new Date(a.date) - new Date(b.date);
+                        // Same day: order by bill number, so the latest bill shows first.
+                        cmp = (new Date(a.date) - new Date(b.date))
+                            || a.id.localeCompare(b.id, undefined, { numeric: true });
                     } else if (this.sortField === "id") {
                         cmp = a.id.localeCompare(b.id, undefined, { numeric: true });
                     } else if (this.sortField === "name") {
@@ -879,13 +1016,21 @@
                 tableBody.innerHTML = "";
                 cardsContainer.innerHTML = "";
 
-                if (this.bills.length === 0) {
-                    noBillsMsg.classList.remove("hidden");
-                } else {
-                    noBillsMsg.classList.add("hidden");
-                }
+                const noTrashMsg = document.getElementById("no-trash-message");
+                const inTrash = this.showingTrash;
+                const trashCount = this.bills.filter(b => b.isInTrash).length;
+
+                document.getElementById("bills-list-title").textContent = inTrash ? this.t("trashTitle") : this.t("billsHistoryTitle");
+                document.getElementById("bills-list-icon").className = inTrash ? "fa-solid fa-trash-can text-rose-500" : "fa-solid fa-list-check text-brand-600";
+                document.getElementById("trash-toggle-icon").className = inTrash ? "fa-solid fa-arrow-left" : "fa-solid fa-trash-can";
+                document.getElementById("trash-toggle-label").textContent = inTrash
+                    ? this.t("backToBillsBtn")
+                    : `${this.t("trashBtn")}${trashCount ? ` (${trashCount})` : ""}`;
 
                 const sortedBills = this.getSortedBills();
+
+                noBillsMsg.classList.toggle("hidden", inTrash || sortedBills.length > 0);
+                noTrashMsg.classList.toggle("hidden", !inTrash || sortedBills.length > 0);
 
                 sortedBills.forEach(bill => {
                     // Table Row (Desktop)
@@ -907,12 +1052,19 @@
                                 <button onclick="app.viewInvoice('${bill.id}')" class="p-1.5 text-brand-600 hover:bg-brand-50 rounded-lg transition" title="${this.t('viewTooltip')}">
                                     <i class="fa-solid fa-eye"></i>
                                 </button>
+                                ${inTrash ? `
+                                <button onclick="app.restoreBill('${bill.id}')" class="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition" title="${this.t('restoreBtn')}">
+                                    <i class="fa-solid fa-rotate-left"></i>
+                                </button>
+                                <button onclick="app.deleteBillForever('${bill.id}')" class="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg transition" title="${this.t('deleteForeverBtn')}">
+                                    <i class="fa-solid fa-ban"></i>
+                                </button>` : `
                                 <button onclick="app.editBill('${bill.id}')" class="p-1.5 text-slate-600 hover:bg-slate-100 rounded-lg transition" title="${this.t('editTooltip')}">
                                     <i class="fa-solid fa-pen"></i>
                                 </button>
                                 <button onclick="app.deleteBill('${bill.id}')" class="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg transition" title="${this.t('deleteTooltip')}">
                                     <i class="fa-solid fa-trash"></i>
-                                </button>
+                                </button>`}
                             </div>
                         </td>
                     `;
@@ -937,12 +1089,19 @@
                             <button onclick="app.viewInvoice('${bill.id}')" class="px-3 py-1.5 bg-brand-50 text-brand-700 text-xs font-semibold rounded-lg">
                                 <i class="fa-solid fa-eye mr-1"></i> ${this.t('viewTooltip')}
                             </button>
+                            ${inTrash ? `
+                            <button onclick="app.restoreBill('${bill.id}')" class="px-3 py-1.5 bg-emerald-50 text-emerald-700 text-xs font-semibold rounded-lg">
+                                <i class="fa-solid fa-rotate-left mr-1"></i> ${this.t('restoreBtn')}
+                            </button>
+                            <button onclick="app.deleteBillForever('${bill.id}')" class="px-3 py-1.5 bg-rose-50 text-rose-600 text-xs font-semibold rounded-lg">
+                                <i class="fa-solid fa-ban mr-1"></i> ${this.t('deleteForeverBtn')}
+                            </button>` : `
                             <button onclick="app.editBill('${bill.id}')" class="px-3 py-1.5 bg-slate-100 text-slate-700 text-xs font-semibold rounded-lg">
                                 <i class="fa-solid fa-pen mr-1"></i> ${this.t('editBtn')}
                             </button>
                             <button onclick="app.deleteBill('${bill.id}')" class="px-3 py-1.5 bg-rose-50 text-rose-600 text-xs font-semibold rounded-lg">
                                 <i class="fa-solid fa-trash mr-1"></i> ${this.t('deleteBtnLabel')}
-                            </button>
+                            </button>`}
                         </div>
                     `;
                     cardsContainer.appendChild(card);
@@ -976,9 +1135,29 @@
                 this.renderDashboard();
             }
 
+            getNextBillNumber() {
+                // Use the highest existing number, not the bill count - after a delete
+                // the count would reuse an existing number and overwrite that bill.
+                let maxNum = 1000;
+                this.bills.forEach(bill => {
+                    const num = parseInt(String(bill.id).replace(/^BILL-/, ""), 10);
+                    if (!isNaN(num) && num > maxNum) maxNum = num;
+                });
+                return maxNum + 1;
+            }
+
             async createNewBill() {
                 await this.flushAutoSave();
-                const nextNum = 1001 + this.bills.length;
+                if (!navigator.onLine) {
+                    appAlert(this.t("alertOfflineNewBill"), "error");
+                    return;
+                }
+                if (!this.billsSynced) {
+                    appAlert(this.t("alertSyncingNewBill"));
+                    return;
+                }
+                const nextNum = this.getNextBillNumber();
+                this.isNewBill = true;
                 this.currentBill = {
                     id: "BILL-" + nextNum,
                     customerName: "",
@@ -1003,6 +1182,7 @@
                 const bill = this.bills.find(b => b.id === billId);
                 if (!bill) return;
                 this.currentBill = JSON.parse(JSON.stringify(bill));
+                this.isNewBill = false;
                 this.loadBillIntoEditor();
                 this.editorMode = "edit";
                 document.getElementById("editor-title").textContent = this.t("editBillTitle");
@@ -1076,7 +1256,7 @@
             removeItemRow(btn) {
                 const tbody = document.getElementById("editor-items-body");
                 if (tbody.children.length <= 1) {
-                    alert(this.t("alertAtLeastOneItem"));
+                    appAlert(this.t("alertAtLeastOneItem"));
                     return;
                 }
                 const row = btn.closest("tr");
@@ -1160,13 +1340,13 @@
                 const { customerName, phone, date, notes, items, grandTotal } = this.collectFormData();
 
                 if (!customerName) {
-                    alert(this.t("alertEnterCustomerName"));
+                    appAlert(this.t("alertEnterCustomerName"));
                     document.getElementById("bill-customer-name").focus();
                     return;
                 }
 
                 if (items.length === 0) {
-                    alert(this.t("alertAtLeastOneItemName"));
+                    appAlert(this.t("alertAtLeastOneItemName"));
                     return;
                 }
 
@@ -1181,9 +1361,9 @@
                 this.currentBill.updatedAt = new Date().toISOString();
 
                 try {
-                    await this.billsCollection.doc(this.currentBill.id).set(this.currentBill);
+                    await this.persistCurrentBill();
                 } catch (e) {
-                    alert("Failed to save bill: " + e.message);
+                    appAlert("Failed to save bill: " + e.message, "error");
                     return;
                 }
 
@@ -1208,8 +1388,8 @@
 
                 const { customerName, phone, date, notes, items, grandTotal } = this.collectFormData();
 
-                // Don't create a bill record until there's something worth saving.
-                if (!customerName && items.length === 0) return;
+                // A bill is only worth saving once it has at least one named item.
+                if (items.length === 0) return;
 
                 this.currentBill.customerName = customerName;
                 this.currentBill.phone = phone;
@@ -1220,18 +1400,110 @@
                 this.currentBill.updatedAt = new Date().toISOString();
 
                 try {
-                    await this.billsCollection.doc(this.currentBill.id).set(this.currentBill);
+                    await this.persistCurrentBill();
                 } catch (e) {
                     console.error("Auto-save failed:", e);
                 }
             }
 
+            // Saves are queued so a new bill is only ever created once, even if
+            // auto-save and the Save button fire close together.
+            persistCurrentBill() {
+                const run = this._saveChain.then(() => this._writeCurrentBill());
+                this._saveChain = run.catch(() => {});
+                return run;
+            }
+
+            async _writeCurrentBill() {
+                const bill = this.currentBill;
+                if (!bill) return;
+
+                if (!this.isNewBill) {
+                    // Merge, leaving trash fields alone, so an edit in progress can't
+                    // pull a bill back out of the trash if another device trashed it.
+                    const { isInTrash, trashedAt, ...data } = bill;
+                    await this.billsCollection.doc(bill.id).set(data, { merge: true });
+                    return;
+                }
+
+                if (!navigator.onLine) {
+                    throw new Error(this.t("alertOfflineNewBill"));
+                }
+
+                // Claim an unused bill number atomically: if another device (or a stale
+                // list) already took this number, move to the next free one instead of
+                // overwriting the existing bill.
+                const claimedId = await this.db.runTransaction(async tx => {
+                    let num = Math.max(parseInt(bill.id.replace(/^BILL-/, ""), 10) || 0, this.getNextBillNumber());
+                    for (let attempt = 0; attempt < 50; attempt++, num++) {
+                        const ref = this.billsCollection.doc("BILL-" + num);
+                        const existing = await tx.get(ref);
+                        if (!existing.exists) {
+                            tx.set(ref, { ...bill, id: "BILL-" + num });
+                            return "BILL-" + num;
+                        }
+                    }
+                    throw new Error("Could not find a free bill number");
+                });
+
+                bill.id = claimedId;
+                if (this.currentBill === bill) {
+                    this.isNewBill = false;
+                    document.getElementById("bill-id-display").textContent = claimedId;
+                }
+            }
+
+            toggleTrashView() {
+                this.showingTrash = !this.showingTrash;
+                this.renderDashboard();
+                this.filterBills();
+            }
+
+            // Delete only moves a bill to the trash; it is erased only from the trash.
             async deleteBill(billId) {
-                if (confirm(this.t("confirmDeleteBill").replace("{id}", billId))) {
+                const ok = await appConfirm({
+                    title: this.t("confirmDeleteTitle"),
+                    message: this.t("confirmDeleteBill").replace("{id}", billId),
+                    okLabel: this.t("moveBtn"),
+                    tone: "trash"
+                });
+                if (ok) {
+                    try {
+                        await this.billsCollection.doc(billId).update({
+                            isInTrash: true,
+                            trashedAt: new Date().toISOString()
+                        });
+                    } catch (e) {
+                        appAlert("Failed to delete bill: " + e.message, "error");
+                    }
+                }
+            }
+
+            async restoreBill(billId) {
+                try {
+                    await this.billsCollection.doc(billId).update({
+                        isInTrash: false,
+                        trashedAt: firebase.firestore.FieldValue.delete()
+                    });
+                } catch (e) {
+                    appAlert("Failed to restore bill: " + e.message, "error");
+                }
+            }
+
+            async deleteBillForever(billId) {
+                const bill = this.bills.find(b => b.id === billId);
+                if (!bill || !bill.isInTrash) return;
+                const ok = await appConfirm({
+                    title: this.t("confirmDeleteForeverTitle"),
+                    message: this.t("confirmDeleteForever").replace("{id}", billId),
+                    okLabel: this.t("deleteBtnLabel"),
+                    tone: "danger"
+                });
+                if (ok) {
                     try {
                         await this.billsCollection.doc(billId).delete();
                     } catch (e) {
-                        alert("Failed to delete bill: " + e.message);
+                        appAlert("Failed to delete bill: " + e.message, "error");
                     }
                 }
             }
@@ -1244,6 +1516,7 @@
 
             showInvoicePreview(bill) {
                 this.currentBill = bill;
+                this.isNewBill = false;
 
                 document.getElementById("prev-bill-id").textContent = bill.id;
                 document.getElementById("prev-bill-date").textContent = this.formatDate(bill.date);
@@ -1434,7 +1707,7 @@
                     }
                 } catch (e) {
                     console.error("PDF generation failed, falling back to print:", e);
-                    alert(this.t("pdfSaveHint"));
+                    await appAlert(this.t("pdfSaveHint"));
                     this.fillPrintArea();
                     window.print();
                 } finally {
